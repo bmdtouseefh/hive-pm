@@ -1,0 +1,28 @@
+{
+  "name": "pulse-pm",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 1420 --strictPort",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --port 1420",
+    "tauri": "tauri",
+    "sync:server": "bun sync-server/server.ts",
+    "sync:service": "bash sync-server/install-service.sh",
+    "sync:test": "bun sync-server/sync.test.ts"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "solid-js": "^1.9.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^24.13.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-solid": "^2.11.14"
+  }
+}
