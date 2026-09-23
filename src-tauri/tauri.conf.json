@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Pulse PM",
+  "productName": "Hive PM",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.honeybee.plans",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Pulse - Project Manager",
+        "title": "Hive - Honeybee Project Manager",
         "width": 1280,
         "height": 800,
         "minWidth": 900,
@@ -23,6 +23,11 @@
     ],
     "security": {
       "csp": null
+    }
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:hive-pm.db"]
     }
   },
   "bundle": {

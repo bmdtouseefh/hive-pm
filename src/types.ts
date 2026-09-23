@@ -42,8 +42,8 @@ export interface Tombstone {
 }
 
 export const STATUS_META: Record<TaskStatus, { label: string; dot: string }> = {
-  todo: { label: "To do", dot: "bg-zinc-400" },
-  "in-progress": { label: "In progress", dot: "bg-amber-400" },
+  todo: { label: "To do", dot: "bg-stone-400" },
+  "in-progress": { label: "In progress", dot: "bg-honey-400" },
   done: { label: "Done", dot: "bg-emerald-400" },
 };
 
@@ -51,24 +51,19 @@ export const PRIORITY_META: Record<
   Priority,
   { label: string; classes: string }
 > = {
-  low: { label: "Low", classes: "text-sky-300 bg-sky-400/10 border-sky-400/20" },
-  medium: { label: "Med", classes: "text-violet-300 bg-violet-400/10 border-violet-400/20" },
-  high: { label: "High", classes: "text-amber-300 bg-amber-400/10 border-amber-400/20" },
-  urgent: { label: "Urgent", classes: "text-rose-300 bg-rose-400/10 border-rose-400/20" },
+  low: { label: "Low", classes: "text-cream-300 bg-hive-800 border-hive-600" },
+  medium: { label: "Med", classes: "text-honey-200 bg-honey-500/10 border-honey-500/30" },
+  high: { label: "High", classes: "text-honey-300 bg-honey-400/15 border-honey-400/40" },
+  urgent: { label: "Urgent", classes: "text-orange-300 bg-orange-500/15 border-orange-400/40" },
 };
 
-export const PROJECT_COLORS = [
-  "#8b5cf6", "#6366f1", "#22d3ee", "#34d399",
-  "#fbbf24", "#fb7185", "#f97316", "#e879f9",
-];
-
-export const GOAL_COLORS = [
-  "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b",
-  "#ef4444", "#ec4899", "#6366f1", "#84cc16",
+export const COLORS = [
+  "#f59e0b", "#fbbf24", "#f97316", "#eab308",
+  "#84cc16", "#10b981", "#fde68a", "#b45309",
 ];
 
 export function uid(prefix = "id"): string {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}_${crypto.randomUUID()}`;
 }
 
 export function isOverdue(t: Task): boolean {

@@ -2,9 +2,10 @@ import { Show, createSignal } from "solid-js";
 import { useStore } from "../store";
 import { checkServer, getAutoSync, getSyncServer, setAutoSync, setSyncServer } from "../lib/lanSync";
 import { Modal, Field, inputCls } from "./ui";
+import { tasksToCSV } from "../lib/taskExport";
 
-function download(filename: string, text: string) {
-  const blob = new Blob([text], { type: "application/json" });
+function download(filename: string, text: string, type = "application/json") {
+  const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -25,7 +26,7 @@ export function SyncDialog(props: { onClose: () => void }) {
   const [autoSync, setAutoSyncState] = createSignal(getAutoSync());
   const [serverBusy, setServerBusy] = createSignal(false);
 
-  const filename = () => `pulse-pm-sync-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = () => `hive-pm-sync-${new Date().toISOString().slice(0, 10)}.json`;
 
   const summary = (r: { added: number; updated: number; removed: number }) =>
     `${r.added} new · ${r.updated} updated · ${r.removed} removed`;
@@ -42,7 +43,7 @@ export function SyncDialog(props: { onClose: () => void }) {
     try {
       setSyncServer(url);
       const ok = await checkServer(url);
-      if (!ok) throw new Error("No Pulse sync server there — is it running on your home PC?");
+      if (!ok) throw new Error("No Hive sync server there — is it running on your home PC?");
       const r = await actions.syncNow();
       setNotice(`Synced with home server: ${summary(r)}.`);
     } catch (e) {
@@ -57,8 +58,7 @@ export function SyncDialog(props: { onClose: () => void }) {
     setError(null);
     try {
       const r = actions.importData(json);
-      const parts = [`${r.added} new`, `${r.updated} updated`, `${r.removed} removed`];
-      setNotice(`Merged: ${parts.join(" · ")}.`);
+      setNotice(`Merged: ${summary(r)}.`);
       setPasted("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read that file.");
@@ -83,24 +83,36 @@ export function SyncDialog(props: { onClose: () => void }) {
   return (
     <Modal onClose={props.onClose} wide>
       <div class="p-5">
-        <h2 class="text-lg font-extrabold text-white">Sync phone ⇄ PC</h2>
-        <p class="text-xs leading-relaxed text-zinc-500">
-          At home the app syncs itself with your home server on launch. Away from
-          home it just works offline — sync when you're back.
+        <h2 class="text-lg font-extrabold text-cream-100">Sync phone ⇄ PC</h2>
+        <p class="text-xs leading-relaxed text-cream-500">
+          At home the app syncs itself with your home server on launch and
+          whenever you're back online. Away from home it just works offline —
+          sync when you're back.
+        </p>
+        <p class="mt-1 text-[11px] text-cream-500">
+          On-device storage:{" "}
+          <span class="font-bold text-cream-300">
+            {state.storage === "sqlite"
+              ? "SQLite (durable)"
+              : state.storage === "localStorage"
+                ? "Browser local storage (this device)"
+                : "Loading…"}
+          </span>
+          {state.serverCursor ? " · delta sync ready" : ""}
         </p>
 
         {/* home server */}
-        <div class="mt-3 rounded-xl border border-zinc-700 bg-zinc-800 p-3">
+        <div class="mt-3 rounded-xl border border-hive-600 bg-hive-800 p-3">
           <div class="flex items-center gap-2">
-            <div class="text-sm font-bold text-white">Home server (auto)</div>
+            <div class="text-sm font-bold text-cream-100">Home server (auto)</div>
             <Show when={state.lastSyncAt}>
-              <div class="ml-auto text-[11px] text-zinc-400">
+              <div class="ml-auto text-[11px] text-cream-500">
                 ✓ {new Date(state.lastSyncAt!).toLocaleString()}
                 {state.lastSyncSummary ? ` · ${state.lastSyncSummary}` : ""}
               </div>
             </Show>
           </div>
-          <div class="mt-2 flex gap-2">
+          <form class="mt-2 flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); doSyncNow(); }}>
             <input
               class={inputCls}
               value={serverUrl()}
@@ -109,14 +121,14 @@ export function SyncDialog(props: { onClose: () => void }) {
               inputmode="url"
             />
             <button
-              onClick={doSyncNow}
+              type="submit"
               disabled={serverBusy() || !serverUrl().trim()}
-              class="shrink-0 rounded-xl bg-indigo-500 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-400 disabled:opacity-40"
+              class="shrink-0 rounded-xl bg-honey-400 px-4 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300 disabled:opacity-40"
             >
               {serverBusy() ? "Syncing…" : "Sync now"}
             </button>
-          </div>
-          <label class="mt-2 flex cursor-pointer items-center gap-2 text-xs text-zinc-300">
+          </form>
+          <label class="mt-2 flex cursor-pointer items-center gap-2 text-xs text-cream-300">
             <input
               type="checkbox"
               checked={autoSync()}
@@ -124,44 +136,50 @@ export function SyncDialog(props: { onClose: () => void }) {
                 setAutoSync(e.currentTarget.checked);
                 setAutoSyncState(e.currentTarget.checked);
               }}
-              class="h-4 w-4 accent-indigo-500"
+              class="h-4 w-4 accent-honey-500"
             />
             Sync automatically on launch when the server is reachable
           </label>
         </div>
 
-        <div class="mt-3 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+        <div class="mt-3 text-[11px] font-bold uppercase tracking-wider text-cream-500">
           Manual file sync (no network needed)
         </div>
 
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           {/* export */}
-          <div class="rounded-xl border border-zinc-700 bg-zinc-800 p-3">
-            <div class="text-sm font-bold text-white">1 · From this device</div>
-            <div class="mt-0.5 text-[11px] text-zinc-400">
+          <div class="rounded-xl border border-hive-600 bg-hive-800 p-3">
+            <div class="text-sm font-bold text-cream-100">1 · From this device</div>
+            <div class="mt-0.5 text-[11px] text-cream-500">
               {state.projects.length} projects · {state.goals.length} goals · {state.tasks.length} tasks
             </div>
             <div class="mt-2 flex gap-2">
               <button
                 onClick={() => download(filename(), actions.exportData())}
-                class="flex-1 rounded-xl bg-indigo-500 py-2 text-sm font-bold text-white hover:bg-indigo-400"
+                class="flex-1 rounded-xl bg-honey-400 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300"
               >
                 ⤓ Save file
               </button>
               <button
                 onClick={copyAll}
-                class="flex-1 rounded-xl border border-zinc-600 bg-zinc-700 py-2 text-sm font-bold text-zinc-100 hover:bg-zinc-600"
+                class="flex-1 rounded-xl border border-hive-600 bg-hive-700 py-2 text-sm font-bold text-cream-100 hover:bg-hive-600"
               >
                 {copied() ? "✓ Copied" : "⧉ Copy"}
               </button>
             </div>
+            <button
+              onClick={() => download(filename().replace("sync-", "tasks-").replace(".json", ".csv"), tasksToCSV(state.projects, state.goals, state.tasks), "text/csv")}
+              class="mt-2 w-full rounded-xl border border-hive-600 bg-hive-700 py-2 text-sm font-bold text-cream-100 hover:bg-hive-600"
+            >
+              ⤓ Tasks CSV (spreadsheet)
+            </button>
           </div>
 
           {/* import */}
-          <div class="rounded-xl border border-zinc-700 bg-zinc-800 p-3">
-            <div class="text-sm font-bold text-white">2 · Into this device</div>
-            <div class="mt-0.5 text-[11px] text-zinc-400">Merges the other device's file into this one.</div>
-            <label class="mt-2 block cursor-pointer rounded-xl border border-dashed border-zinc-600 py-2.5 text-center text-sm font-semibold text-zinc-300 hover:border-zinc-400 hover:text-white">
+          <div class="rounded-xl border border-hive-600 bg-hive-800 p-3">
+            <div class="text-sm font-bold text-cream-100">2 · Into this device</div>
+            <div class="mt-0.5 text-[11px] text-cream-500">Merges the other device's file into this one.</div>
+            <label class="mt-2 block cursor-pointer rounded-xl border border-dashed border-hive-600 py-2.5 text-center text-sm font-semibold text-cream-300 hover:border-honey-500 hover:text-cream-100">
               ⤒ Choose sync file…
               <input
                 type="file"
@@ -182,18 +200,19 @@ export function SyncDialog(props: { onClose: () => void }) {
             rows={3}
             value={pasted()}
             onInput={(e) => setPasted(e.currentTarget.value)}
-            placeholder='Paste the file contents here…'
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && pasted().trim()) doImport(pasted()); }}
+            placeholder='Paste the file contents here… (Ctrl+Enter to merge)'
           />
         </Field>
         <div class="mt-2 flex gap-2">
           <button
             onClick={() => pasted().trim() && doImport(pasted())}
             disabled={!pasted().trim()}
-            class="flex-1 rounded-xl bg-indigo-500 py-2 text-sm font-bold text-white hover:bg-indigo-400 disabled:opacity-40"
+            class="flex-1 rounded-xl bg-honey-400 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300 disabled:opacity-40"
           >
             Merge pasted data
           </button>
-          <button onClick={props.onClose} class="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-700">
+          <button onClick={props.onClose} class="flex-1 rounded-xl border border-hive-600 bg-hive-800 py-2 text-sm font-semibold text-cream-300 hover:bg-hive-700">
             Close
           </button>
         </div>

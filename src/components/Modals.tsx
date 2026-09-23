@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from "solid-js";
 import { useStore } from "../store";
-import { GOAL_COLORS, PROJECT_COLORS, type Goal, type Priority, type Project, type Task, type TaskStatus } from "../types";
+import { COLORS, type Goal, type Priority, type Project, type Task, type TaskStatus } from "../types";
 import { Modal, Field, inputCls } from "./ui";
 
 const EMOJIS = ["🚀", "📱", "📈", "🎨", "⚙️", "📚", "💡", "🏠", "🎮", "💼", "🌟", "🔥"];
@@ -11,7 +11,7 @@ export function ProjectModal(props: { editing?: Project; onClose: () => void }) 
   const [name, setName] = createSignal(props.editing?.name ?? "");
   const [desc, setDesc] = createSignal(props.editing?.description ?? "");
   const [icon, setIcon] = createSignal(props.editing?.icon ?? "🚀");
-  const [color, setColor] = createSignal(props.editing?.color ?? PROJECT_COLORS[0]);
+  const [color, setColor] = createSignal(props.editing?.color ?? COLORS[0]);
 
   const save = () => {
     if (!name().trim()) return;
@@ -23,26 +23,26 @@ export function ProjectModal(props: { editing?: Project; onClose: () => void }) 
   return (
     <Modal onClose={props.onClose}>
       <div class="p-5">
-        <h2 class="text-lg font-extrabold text-white">{props.editing ? "Edit project" : "New project"}</h2>
-        <p class="text-xs text-zinc-500">Top of the hierarchy — it holds goals.</p>
-        <div class="mt-4 space-y-3">
+        <h2 class="text-lg font-extrabold text-cream-100">{props.editing ? "Edit project" : "New project"}</h2>
+        <p class="text-xs text-cream-500">Top of the hierarchy — it holds goals.</p>
+        <form class="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
           <Field label="Name"><input class={inputCls} value={name()} onInput={(e) => setName(e.currentTarget.value)} placeholder="e.g. Website relaunch" autofocus /></Field>
           <Field label="Description"><textarea class={inputCls} rows={2} value={desc()} onInput={(e) => setDesc(e.currentTarget.value)} placeholder="What does success look like?" /></Field>
           <Field label="Icon">
             <div class="flex flex-wrap gap-1.5">
-              <For each={EMOJIS}>{(e) => <button onClick={() => setIcon(e)} class={`grid h-9 w-9 place-items-center rounded-xl border text-lg transition ${icon() === e ? "border-indigo-400 bg-indigo-500/20" : "border-zinc-700 bg-zinc-800 hover:bg-zinc-700"}`}>{e}</button>}</For>
+              <For each={EMOJIS}>{(e) => <button type="button" onClick={() => setIcon(e)} class={`grid h-9 w-9 place-items-center rounded-xl border text-lg transition ${icon() === e ? "border-honey-400 bg-honey-500/20" : "border-hive-600 bg-hive-800 hover:bg-hive-700"}`}>{e}</button>}</For>
             </div>
           </Field>
           <Field label="Color">
             <div class="flex flex-wrap gap-2">
-              <For each={PROJECT_COLORS}>{(c) => <button onClick={() => setColor(c)} class="h-8 w-8 rounded-full border-2 transition" style={{ background: c, "border-color": color() === c ? "#fff" : "transparent" }} />}</For>
+              <For each={COLORS}>{(c) => <button type="button" onClick={() => setColor(c)} class="hex h-8 w-8 border-2 transition" style={{ background: c, "border-color": color() === c ? "#fef3c7" : "transparent" }} />}</For>
             </div>
           </Field>
           <div class="flex gap-2 pt-1">
-            <button onClick={props.onClose} class="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-700">Cancel</button>
-            <button onClick={save} disabled={!name().trim()} class="flex-1 rounded-xl bg-indigo-500 py-2 text-sm font-bold text-white hover:bg-indigo-400 disabled:opacity-40">Save project</button>
+            <button type="button" onClick={props.onClose} class="flex-1 rounded-xl border border-hive-600 bg-hive-800 py-2 text-sm font-semibold text-cream-300 hover:bg-hive-700">Cancel</button>
+            <button type="submit" disabled={!name().trim()} class="flex-1 rounded-xl bg-honey-400 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300 disabled:opacity-40">Save project</button>
           </div>
-        </div>
+        </form>
       </div>
     </Modal>
   );
@@ -53,7 +53,7 @@ export function GoalModal(props: { projectId: string; editing?: Goal; onClose: (
   const { state, actions } = useStore();
   const [title, setTitle] = createSignal(props.editing?.title ?? "");
   const [desc, setDesc] = createSignal(props.editing?.description ?? "");
-  const [color, setColor] = createSignal(props.editing?.color ?? GOAL_COLORS[0]);
+  const [color, setColor] = createSignal(props.editing?.color ?? COLORS[0]);
   const [deadline, setDeadline] = createSignal(props.editing?.deadline ?? "");
   const [projectId, setProjectId] = createSignal(props.editing?.projectId ?? props.projectId);
 
@@ -68,9 +68,9 @@ export function GoalModal(props: { projectId: string; editing?: Goal; onClose: (
   return (
     <Modal onClose={props.onClose}>
       <div class="p-5">
-        <h2 class="text-lg font-extrabold text-white">{props.editing ? "Edit goal" : "New goal"}</h2>
-        <p class="text-xs text-zinc-500">Middle of the hierarchy — it groups tasks.</p>
-        <div class="mt-4 space-y-3">
+        <h2 class="text-lg font-extrabold text-cream-100">{props.editing ? "Edit goal" : "New goal"}</h2>
+        <p class="text-xs text-cream-500">Middle of the hierarchy — it groups tasks.</p>
+        <form class="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
           <Show when={state.projects.length > 1}>
             <Field label="Project">
               <select class={inputCls} value={projectId()} onChange={(e) => setProjectId(e.currentTarget.value)}>
@@ -81,18 +81,18 @@ export function GoalModal(props: { projectId: string; editing?: Goal; onClose: (
           <Field label="Title"><input class={inputCls} value={title()} onInput={(e) => setTitle(e.currentTarget.value)} placeholder="e.g. Launch landing page" autofocus /></Field>
           <Field label="Description"><textarea class={inputCls} rows={2} value={desc()} onInput={(e) => setDesc(e.currentTarget.value)} placeholder="Outcome + scope…" /></Field>
           <div class="grid grid-cols-2 gap-3">
-            <Field label="Deadline"><input type="date" class={`${inputCls} [color-scheme:dark]`} value={deadline()} onInput={(e) => setDeadline(e.currentTarget.value)} /></Field>
+            <Field label="Deadline"><input type="date" class={inputCls} value={deadline()} onInput={(e) => setDeadline(e.currentTarget.value)} /></Field>
             <Field label="Color">
               <div class="flex flex-wrap gap-1.5 pt-1">
-                <For each={GOAL_COLORS}>{(c) => <button onClick={() => setColor(c)} class="h-7 w-7 rounded-full border-2 transition" style={{ background: c, "border-color": color() === c ? "#fff" : "transparent" }} />}</For>
+                <For each={COLORS}>{(c) => <button type="button" onClick={() => setColor(c)} class="hex h-7 w-7 border-2 transition" style={{ background: c, "border-color": color() === c ? "#fef3c7" : "transparent" }} />}</For>
               </div>
             </Field>
           </div>
           <div class="flex gap-2 pt-1">
-            <button onClick={props.onClose} class="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-700">Cancel</button>
-            <button onClick={save} disabled={!title().trim()} class="flex-1 rounded-xl bg-indigo-500 py-2 text-sm font-bold text-white hover:bg-indigo-400 disabled:opacity-40">Save goal</button>
+            <button type="button" onClick={props.onClose} class="flex-1 rounded-xl border border-hive-600 bg-hive-800 py-2 text-sm font-semibold text-cream-300 hover:bg-hive-700">Cancel</button>
+            <button type="submit" disabled={!title().trim()} class="flex-1 rounded-xl bg-honey-400 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300 disabled:opacity-40">Save goal</button>
           </div>
-        </div>
+        </form>
       </div>
     </Modal>
   );
@@ -126,9 +126,9 @@ export function TaskModal(props: { goalId: string; editing?: Task; onClose: () =
   return (
     <Modal onClose={props.onClose} wide>
       <div class="p-5">
-        <h2 class="text-lg font-extrabold text-white">{props.editing ? "Edit task" : "New task"}</h2>
-        <p class="text-xs text-zinc-500">Bottom of the hierarchy — the actual work.</p>
-        <div class="mt-4 space-y-3">
+        <h2 class="text-lg font-extrabold text-cream-100">{props.editing ? "Edit task" : "New task"}</h2>
+        <p class="text-xs text-cream-500">Bottom of the hierarchy — the actual work.</p>
+        <form class="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
           <Field label="Goal">
             <select class={inputCls} value={goalId()} onChange={(e) => setGoalId(e.currentTarget.value)}>
               <For each={goalsOfActive()}>
@@ -141,7 +141,7 @@ export function TaskModal(props: { goalId: string; editing?: Task; onClose: () =
           </Field>
           <Field label="Title"><input class={inputCls} value={title()} onInput={(e) => setTitle(e.currentTarget.value)} placeholder="e.g. Design empty state" autofocus /></Field>
           <Field label="Notes"><textarea class={inputCls} rows={3} value={notes()} onInput={(e) => setNotes(e.currentTarget.value)} placeholder="Details, links, acceptance criteria…" /></Field>
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Status">
               <select class={inputCls} value={status()} onChange={(e) => setStatus(e.currentTarget.value as TaskStatus)}>
                 <option value="todo">To do</option>
@@ -157,13 +157,13 @@ export function TaskModal(props: { goalId: string; editing?: Task; onClose: () =
                 <option value="urgent">Urgent</option>
               </select>
             </Field>
-            <Field label="Due date"><input type="date" class={`${inputCls} [color-scheme:dark]`} value={due()} onInput={(e) => setDue(e.currentTarget.value)} /></Field>
+            <Field label="Due date"><input type="date" class={inputCls} value={due()} onInput={(e) => setDue(e.currentTarget.value)} /></Field>
           </div>
           <div class="flex gap-2 pt-1">
-            <button onClick={props.onClose} class="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-700">Cancel</button>
-            <button onClick={save} disabled={!title().trim()} class="flex-1 rounded-xl bg-indigo-500 py-2 text-sm font-bold text-white hover:bg-indigo-400 disabled:opacity-40">Save task</button>
+            <button type="button" onClick={props.onClose} class="flex-1 rounded-xl border border-hive-600 bg-hive-800 py-2 text-sm font-semibold text-cream-300 hover:bg-hive-700">Cancel</button>
+            <button type="submit" disabled={!title().trim()} class="flex-1 rounded-xl bg-honey-400 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300 disabled:opacity-40">Save task</button>
           </div>
-        </div>
+        </form>
       </div>
     </Modal>
   );

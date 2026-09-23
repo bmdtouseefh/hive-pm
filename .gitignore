@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local sync databases (each device/server has its own)
+*.db
+*.db-wal
+*.db-shm
+sync-server/hive-pm-sync.db*
+sync-server/pulse-pm-sync.json
+sync-server/hive-pm-sync.json
+
+# Production starter runtime (pid files; logs/ already ignored above)
+.run/

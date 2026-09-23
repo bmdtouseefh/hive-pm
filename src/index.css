@@ -2,28 +2,104 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Hive — warm dark browns */
+  --color-hive-950: #161006;
+  --color-hive-900: #1d160b;
+  --color-hive-850: #241b0f;
+  --color-hive-800: #2e2314;
+  --color-hive-700: #453419;
+  --color-hive-600: #5c4a26;
+
+  /* Honey — ambers */
+  --color-honey-200: #fde68a;
+  --color-honey-300: #fcd34d;
+  --color-honey-400: #fbbf24;
+  --color-honey-500: #f59e0b;
+  --color-honey-600: #d97706;
+  --color-honey-700: #b45309;
+
+  /* Beeswax cream text */
+  --color-cream-100: #fef3c7;
+  --color-cream-300: #fde9b8;
+  --color-cream-500: #d9c89a;
+
+  /* Ink for text sitting on honey fills — constant in both modes */
+  --color-honey-ink: #1d160b;
+}
+
+/*
+ * Light honeybee — warm paper, bark text.
+ * Tailwind v4 resolves theme colors through these exact CSS variables,
+ * so overriding them under html.light flips the whole UI without
+ * touching any component classes.
+ */
+html {
+  color-scheme: dark;
+}
+
+html.light {
+  --color-hive-950: #f4eedd; /* page */
+  --color-hive-900: #ece2c9; /* sidebar / top bar */
+  --color-hive-850: #fffdf7; /* cards */
+  --color-hive-800: #f5eedb; /* inputs / wells / chips */
+  --color-hive-700: #e4d5b3; /* badges / hover fills */
+  --color-hive-600: #d3bf94; /* borders */
+
+  /* pale honey text accents become readable ambers on paper */
+  --color-honey-200: #92400e;
+  --color-honey-300: #b45309;
+
+  /* cream text becomes bark text */
+  --color-cream-100: #2b2111;
+  --color-cream-300: #5d4f36;
+  --color-cream-500: #8c7c5e;
+
+  /* default-palette accents too faint on paper otherwise */
+  --color-rose-300: #e11d48;
+  --color-orange-300: #c2410c;
+
+  color-scheme: light;
 }
 
 html, body, #root {
   height: 100%;
 }
+@supports (height: 100dvh) {
+  html, body, #root {
+    height: 100dvh;
+  }
+}
 
 body {
   font-family: var(--font-sans);
-  background: #17181c;
-  color: #e4e4e7;
+  background: var(--color-hive-950);
+  color: var(--color-cream-100);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #52525b; }
+::-webkit-scrollbar-thumb { background: #453419; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #5c4a26; }
+html.light ::-webkit-scrollbar-thumb { background: #d3bf94; }
+html.light ::-webkit-scrollbar-thumb:hover { background: #b89b67; }
 
-.glass {
-  background: #202227;
-  border: 1px solid #2e3138;
+/* Hexagon shape for bee / hive avatars, logo, dots */
+.hex {
+  clip-path: polygon(25% 3%, 75% 3%, 98% 50%, 75% 97%, 25% 97%, 2% 50%);
+}
+
+/* Subtle honeycomb texture — SVG hex grid at very low opacity */
+.honeycomb-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cg fill='none' stroke='%23f59e0b' stroke-opacity='0.10' stroke-width='1.2'%3E%3Cpath d='M28 0l24.2 14v28L28 56 3.8 42V14z'/%3E%3Cpath d='M28 56l24.2 14v28L28 112 3.8 98V70z' transform='translate(0 -13)'/%3E%3Cpath d='M-14 28l24.2 14v28L-14 84l-24.2-14V42z' transform='translate(28 0)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 56px 97px;
+}
+
+.honeycomb-fade {
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
 }
 
 @keyframes fadeUp {
@@ -37,3 +113,13 @@ body {
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 .anim-pop { animation: popIn 0.22s ease both; }
+
+/* Bee waggle on hover for the logo */
+@keyframes waggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg) translateY(-1px); }
+  75% { transform: rotate(8deg) translateY(1px); }
+}
+.bee-waggle:hover {
+  animation: waggle 0.5s ease-in-out;
+}

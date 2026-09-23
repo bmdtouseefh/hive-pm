@@ -1,6 +1,6 @@
 # Pulse PM — Tauri + Bun + SolidJS + Tailwind
 
-A dark personal project manager with a strict hierarchy:
+A honeybee-themed personal project manager (dark + light modes) with a strict hierarchy:
 
 ```
 Project → Goal → Task
@@ -16,8 +16,9 @@ Project → Goal → Task
 - [Bun](https://bun.sh) — package manager / scripts
 - [SolidJS](https://solidjs.com) + Vite — reactive UI, no virtual DOM
 - [Tailwind CSS v4](https://tailwindcss.com) — styling (`@tailwindcss/vite`)
-- `localStorage` — all data lives on-device, works fully offline
-- `sync-server/` — tiny Bun server holding the shared copy on your home network
+- `SQLite` — all data lives in `hive-pm.db` on-device (Tauri plugin-sql),
+  works fully offline; phone/plain-web browsers use a localStorage backend
+- `sync-server/` — tiny Bun server holding the shared SQLite copy on your home network
 
 ## Features
 
@@ -29,7 +30,8 @@ Project → Goal → Task
 - Search (`/`), priority badges, overdue highlighting, one-click toggle done
 - Seed demo data + reset button
 - Keyboard: `/` search, `Esc` close modal
-- **Sync**: file-based phone ⇄ PC merge, no server or account needed
+- **Sync**: delta phone ⇄ PC merge over SQLite — only changed rows travel,
+  newest edit per record wins, deletes carry over, no account needed
 
 ## Run
 
@@ -62,7 +64,7 @@ with `journalctl --user -u pulse-pm-sync -f`, remove it with
 
 ```bash
 bun run sync:server
-# PORT=8091 SYNC_DATA=./pulse-pm-sync.json bun run sync:server
+# PORT=8091 SYNC_DB=./hive-pm-sync.db bun run sync:server
 ```
 
 Then on **each** device (phone app + desktop app, which points at
@@ -74,11 +76,32 @@ both directions: newest edit per record wins, deletes carry over.
 
 Notes:
 - Same Wi-Fi required; the PC app can use `http://127.0.0.1:8091`.
-- The server stores one `pulse-pm-sync.json` file next to itself — back it up
-  like anything else. For trusted home networks only (no login).
+- The server stores one `hive-pm-sync.db` SQLite file (WAL) next to itself —
+  back it up like anything else. An old `hive/pulse-pm-sync.json` is migrated
+  into the DB once automatically on first start. For trusted home networks
+  only (no login).
+- Each sync exchanges only rows changed since the last cursor (delta sync),
+  merged per-record inside a single SQLite transaction — a stale offline
+  device can no longer overwrite newer rows, and concurrent phone+PC pushes
+  can't drop each other.
 - Keep the server running: terminal, `systemd --user` service, autostart, etc.
 - File sync (Save file / import) in the same dialog still works as a fallback
   with no network at all.
+
+### Phone browser (no Android build needed)
+
+Open the PC's web UI address (printed by `start-prod.sh`, e.g.
+`http://192.168.1.50:8080`) in the phone browser while you're home, then
+**Add to Home Screen** for an app-like icon.
+
+- Outside, the app works fully offline: everything is saved in the phone
+  browser's local storage (the top bar shows "Offline · saved here").
+- Back home, it syncs itself automatically as soon as you're back online —
+  only changed rows travel, so nothing gets overwritten.
+- One limitation of plain-`http` LAN hosting: browsers only allow offline
+  app installs (service workers) on HTTPS, so keep the tab open when you
+  leave, or just reopen it when you're home — your data persists in the
+  browser either way.
 
 ### Phone builds
 
@@ -93,10 +116,11 @@ Notes:
 src/
   types.ts            # Project/Goal/Task/Tombstone types + meta
   seed.ts             # demo data
-  store.tsx           # Solid store + localStorage + server/file sync
+  store.tsx           # Solid store + SQLite/localStorage + delta sync
   lib/
-    merge.ts          # shared merge logic (client + server, last-write-wins)
-    lanSync.ts        # server URL prefs + push/pull helper
+    merge.ts          # shared merge + delta logic (client + server, last-write-wins)
+    lanSync.ts        # server URL prefs + delta/full push-pull helpers
+    repo.ts           # durable client snapshots: SQLite (Tauri) + localStorage (browser/phone)
   components/
     ui.tsx            # Ring, ProgressBar, Modal, inputs
     Sidebar.tsx       # project → goal tree
@@ -106,9 +130,10 @@ src/
     Modals.tsx        # Project/Goal/Task dialogs
     SyncDialog.tsx    # home server + export / import sync file
   App.tsx             # shell + modal router
-src-tauri/            # Rust + tauri.conf.json
+src-tauri/            # Rust + tauri.conf.json (sql plugin: sqlite:hive-pm.db)
 sync-server/
   server.ts           # home sync server (bun run sync:server)
+  db.ts               # SQLite storage + transactional delta merge (bun:sqlite)
   install-service.sh  # always-on systemd install (bun run sync:service)
-  sync.test.ts        # merge + HTTP checks (bun run sync:test)
+  sync.test.ts        # merge + delta + SQLite + HTTP checks (bun run sync:test)
 ```

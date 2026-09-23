@@ -2,7 +2,7 @@ import type { Goal, Project, Task, Tombstone } from "../types";
 
 /** The sync payload: same shape as the manual sync file. */
 export interface SyncPayload {
-  app: "pulse-pm";
+  app: "hive-pm" | "pulse-pm";
   version: 1;
   exportedAt: string;
   projects: Project[];
@@ -17,9 +17,122 @@ export interface MergeCounts {
   removed: number;
 }
 
+/** Cap on retained tombstones (sync + local snapshots). */
+export const MAX_TOMBSTONES = 1000;
+
+/**
+ * Delta-sync types. Instead of shipping the whole database on every sync
+ * (which risks a stale device overwriting newer rows when merges race),
+ * clients exchange only records changed since a server cursor.
+ */
+export interface SyncChanges {
+  projects: Project[];
+  goals: Goal[];
+  tasks: Task[];
+  deleted: Tombstone[];
+}
+
+export interface DeltaSyncRequest {
+  app: "hive-pm" | "pulse-pm";
+  version: 1;
+  /** Server cursor the client last saw (null = full pull). */
+  since: string | null;
+  changes: SyncChanges;
+}
+
+export interface DeltaSyncResponse {
+  app: "hive-pm";
+  version: 1;
+  /** New cursor the client should store and send as `since` next time. */
+  serverTime: string;
+  changes: SyncChanges;
+  counts: MergeCounts & { pushed: number };
+}
+
+export function isDeltaRequest(v: unknown): v is DeltaSyncRequest {
+  const r = v as DeltaSyncRequest;
+  return (
+    !!r &&
+    typeof r === "object" &&
+    (r.app === "hive-pm" || r.app === "pulse-pm") &&
+    !!r.changes &&
+    typeof r.changes === "object" &&
+    Array.isArray((r.changes as SyncChanges).projects) &&
+    Array.isArray((r.changes as SyncChanges).goals) &&
+    Array.isArray((r.changes as SyncChanges).tasks) &&
+    (r.since === null || r.since === undefined || typeof r.since === "string")
+  );
+}
+
+export function isDeltaResponse(v: unknown): v is DeltaSyncResponse {
+  const r = v as DeltaSyncResponse;
+  return (
+    !!r &&
+    typeof r === "object" &&
+    r.app === "hive-pm" &&
+    typeof r.serverTime === "string" &&
+    !!r.changes &&
+    Array.isArray(r.changes.projects) &&
+    Array.isArray(r.changes.goals) &&
+    Array.isArray(r.changes.tasks)
+  );
+}
+
+/** Highest timestamp across a payload — usable as a sync cursor. */
+export function maxCursor(p: Pick<SyncPayload, "projects" | "goals" | "tasks" | "deleted">): string | null {
+  let max: string | null = null;
+  const consider = (t?: string) => {
+    if (typeof t === "string" && (max === null || t > max)) max = t;
+  };
+  for (const r of p.projects) consider(r.updatedAt);
+  for (const r of p.goals) consider(r.updatedAt);
+  for (const r of p.tasks) consider(r.updatedAt);
+  for (const d of p.deleted) consider(d.at);
+  return max;
+}
+
+/**
+ * Slice a full payload down to records changed after `since`.
+ * Null `since` returns everything (initial pull).
+ */
+export function extractChanges(
+  p: Pick<SyncPayload, "projects" | "goals" | "tasks" | "deleted">,
+  since: string | null | undefined
+): SyncChanges {
+  if (!since) {
+    return { projects: [...p.projects], goals: [...p.goals], tasks: [...p.tasks], deleted: [...p.deleted] };
+  }
+  return {
+    projects: p.projects.filter((r) => (r.updatedAt ?? "") > since),
+    goals: p.goals.filter((r) => (r.updatedAt ?? "") > since),
+    tasks: p.tasks.filter((r) => (r.updatedAt ?? "") > since),
+    deleted: p.deleted.filter((d) => d.at > since),
+  };
+}
+
+/**
+ * Merge a delta `changes` object into `base`. Same LWW-per-record +
+ * tombstone semantics as mergePayload, but never lets absent records read
+ * as deletions (fixes full-payload override data loss).
+ */
+export function mergeChanges(
+  base: SyncPayload,
+  changes: unknown
+): { payload: SyncPayload; counts: MergeCounts } {
+  const c = (changes ?? {}) as Partial<SyncChanges>;
+  const arr = (v: unknown) => (Array.isArray(v) ? v : []) as never[];
+  return mergePayload(base, {
+    ...blankPayload(),
+    projects: arr(c.projects),
+    goals: arr(c.goals),
+    tasks: arr(c.tasks),
+    deleted: arr(c.deleted),
+  });
+}
+
 export function blankPayload(): SyncPayload {
   return {
-    app: "pulse-pm",
+    app: "hive-pm",
     version: 1,
     exportedAt: new Date().toISOString(),
     projects: [],
@@ -33,7 +146,7 @@ export function isPayload(v: unknown): v is SyncPayload {
   const p = v as SyncPayload;
   return (
     !!p &&
-    p.app === "pulse-pm" &&
+    (p.app === "hive-pm" || p.app === "pulse-pm") &&
     Array.isArray(p.projects) &&
     Array.isArray(p.goals) &&
     Array.isArray(p.tasks)
@@ -108,7 +221,7 @@ export function mergePayload(
 
   return {
     payload: {
-      app: "pulse-pm",
+      app: "hive-pm",
       version: 1,
       exportedAt: new Date().toISOString(),
       projects,
@@ -116,7 +229,7 @@ export function mergePayload(
       tasks,
       deleted: [...tombstones.entries()]
         .map(([id, at]) => ({ id, at }))
-        .slice(-1000),
+        .slice(-MAX_TOMBSTONES),
     },
     counts: {
       added: p.added + g.added + t.added,

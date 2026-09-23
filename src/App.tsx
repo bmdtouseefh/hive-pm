@@ -19,7 +19,6 @@ function Shell() {
   const { state, actions } = useStore();
   const [modal, setModal] = createSignal<ModalState>({ kind: "none" });
   const [syncOpen, setSyncOpen] = createSignal(false);
-  const [editingTask, setEditingTask] = createSignal<Task | undefined>(undefined);
 
   const home = () => state.activeProjectId === null;
   const defaultGoalId = () => {
@@ -28,7 +27,7 @@ function Shell() {
     return state.goals.find((g) => g.projectId === pid)?.id ?? "";
   };
 
-  // keyboard: "/" focuses search, "n" new task, Esc closes
+  // keyboard: "/" focuses search, Esc closes
   onMount(() => {
     // fire-and-forget: syncs when home, silently stays offline when away
     if (getAutoSync() && getSyncServer()) {
@@ -55,7 +54,7 @@ function Shell() {
   const openNewTask = (goalId?: string) => setModal({ kind: "task", goalId: goalId ?? defaultGoalId() });
 
   return (
-    <div class="flex h-screen overflow-hidden bg-[#17181c] text-zinc-100">
+    <div class="flex h-dvh overflow-hidden bg-hive-950 text-cream-100">
       <div class="flex h-full w-full">
         <div class="hidden md:block">
           <Sidebar
@@ -75,16 +74,16 @@ function Shell() {
           />
 
           {/* mobile project picker */}
-          <div class="flex gap-2 overflow-x-auto border-b border-zinc-800 bg-[#1d1f25] px-4 py-2 md:hidden">
-            <button onClick={() => actions.selectProject(null)} class={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${home() ? "bg-zinc-700 text-white" : "bg-zinc-800 text-zinc-400"}`}>✦ All</button>
+          <div class="flex gap-2 overflow-x-auto border-b border-hive-700 bg-hive-900 px-3 py-2 md:hidden">
+            <button onClick={() => actions.selectProject(null)} class={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${home() ? "bg-honey-500 text-honey-ink" : "bg-hive-800 text-cream-500"}`}>⬢ All</button>
             {state.projects.map((p) => (
-              <button onClick={() => actions.selectProject(p.id)} class={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${state.activeProjectId === p.id ? "bg-zinc-700 text-white" : "bg-zinc-800 text-zinc-400"}`}>
+              <button onClick={() => actions.selectProject(p.id)} class={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${state.activeProjectId === p.id ? "bg-honey-500 text-honey-ink" : "bg-hive-800 text-cream-500"}`}>
                 {p.icon} {p.name}
               </button>
             ))}
           </div>
 
-          <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          <div class="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-5">
             <div class="mx-auto max-w-6xl pb-16">
               <Show
                 when={!home() && state.activeProjectId}
@@ -93,7 +92,7 @@ function Shell() {
                 <ProjectView
                   projectId={state.activeProjectId!}
                   onNewTask={(g) => openNewTask(g)}
-                  onEditTask={(t) => { setEditingTask(t); setModal({ kind: "task", goalId: t.goalId, editing: t }); }}
+                  onEditTask={(t) => setModal({ kind: "task", goalId: t.goalId, editing: t })}
                   onNewGoal={() => setModal({ kind: "goal" })}
                   onEditGoal={(id) => setModal({ kind: "goal", editingId: id })}
                   onEditProject={(id) => setModal({ kind: "project", editingId: id })}
@@ -107,22 +106,22 @@ function Shell() {
       {/* modals */}
       <Show when={modal().kind === "project"}>
         <ProjectModal
-          editing={modal().kind === "project" && (modal() as any).editingId ? state.projects.find((p) => p.id === (modal() as any).editingId) : undefined}
+          editing={(() => { const m = modal(); return m.kind === "project" && m.editingId ? state.projects.find((p) => p.id === m.editingId) : undefined; })()}
           onClose={() => setModal({ kind: "none" })}
         />
       </Show>
       <Show when={modal().kind === "goal" && state.activeProjectId}>
         <GoalModal
           projectId={state.activeProjectId!}
-          editing={(() => { const m = modal() as any; return m.editingId ? state.goals.find((g) => g.id === m.editingId) : undefined; })()}
+          editing={(() => { const m = modal(); return m.kind === "goal" && m.editingId ? state.goals.find((g) => g.id === m.editingId) : undefined; })()}
           onClose={() => setModal({ kind: "none" })}
         />
       </Show>
       <Show when={modal().kind === "task"}>
         <TaskModal
-          goalId={(modal() as any).goalId ?? defaultGoalId()}
-          editing={(modal() as any).editing ?? editingTask()}
-          onClose={() => { setModal({ kind: "none" }); setEditingTask(undefined); }}
+          goalId={(() => { const m = modal(); return m.kind === "task" ? m.goalId : defaultGoalId(); })()}
+          editing={(() => { const m = modal(); return m.kind === "task" ? m.editing : undefined; })()}
+          onClose={() => setModal({ kind: "none" })}
         />
       </Show>
       <Show when={syncOpen()}>

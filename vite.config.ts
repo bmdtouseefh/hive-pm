@@ -12,6 +12,9 @@ export default defineConfig({
     strictPort: true,
     host: host || false,
     hmr: host ? { protocol: 'ws', host, port: 1421 } : undefined,
-    watch: { ignored: ['**/src-tauri/**'] },
+    // NOTE: sync-server/*.json is rewritten on every sync POST. If Vite
+    // watches it, each launch auto-sync triggers a full page reload, which
+    // syncs again — an infinite reload loop in dev. Same for dist/ output.
+    watch: { ignored: ['**/src-tauri/**', '**/sync-server/**', '**/dist/**'] },
   },
 })
