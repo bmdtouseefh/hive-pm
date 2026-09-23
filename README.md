@@ -1,4 +1,4 @@
-# Pulse PM — Tauri + Bun + SolidJS + Tailwind
+# Hive PM — Tauri + Bun + SolidJS + Tailwind
 
 A honeybee-themed personal project manager (dark + light modes) with a strict hierarchy:
 
