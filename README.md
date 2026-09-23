@@ -33,7 +33,7 @@ Project → Goal → Task
 - **Sync**: delta phone ⇄ PC merge over SQLite — only changed rows travel,
   newest edit per record wins, deletes carry over, no account needed
 
-## Run
+## Run (development)
 
 ```bash
 bun install
@@ -42,6 +42,42 @@ bun run tauri dev    # desktop app
 bun run build        # web build → dist/
 bun run tauri build  # desktop bundle
 ```
+
+## Production: start / stop (`start-prod.sh`)
+
+On the home PC, one command runs both production processes **daemonized**
+in the background:
+
+1. **Sync server** — SQLite delta sync (phone ⇄ PC) on `HOST:PORT`
+   (default `0.0.0.0:8091`, db `sync-server/hive-pm-sync.db`).
+2. **Web UI** — the built `dist/` served via `vite preview` on
+   `HOST:WEB_PORT` (default `0.0.0.0:8080`), so any LAN device can use the
+   app in a browser with no install.
+
+```bash
+bun run prod -- start    # build dist/ if missing, then start both
+bun run prod -- stop     # stop both
+bun run prod -- restart  # stop, then start
+bun run prod -- status   # running/stopped, health, LAN URLs
+bun run prod -- logs     # tail logs/sync-server.log + logs/web.log
+# ./start-prod.sh start  # same thing directly
+```
+
+- First `start` builds the frontend (`tsc + vite`) automatically when
+  `dist/` is missing; afterwards it reuses the build until you pass
+  `--build`. `--skip-build` fails instead of building when `dist/` is
+  missing. `--no-web` runs the sync server only.
+- Env overrides: `PORT=8091 WEB_PORT=8080 HOST=0.0.0.0
+  SYNC_DB=./sync-server/hive-pm-sync.db` (also `WEB=0`, `SKIP_BUILD=1`).
+- Runtime state: pid files in `.run/` (`sync-server.pid`, `web.pid`),
+  logs in `logs/`. Both are gitignored. `status` prints the LAN URLs to
+  enter in the app's ⇄ Sync dialog and to open in the phone browser,
+  e.g. `http://192.168.1.10:8080` (app) · `http://192.168.1.10:8091`
+  (sync). The PC itself uses `http://127.0.0.1:8091`.
+- One owner per port: `start`/`stop` stop the conflicting systemd units
+  (`pulse-pm-sync.service`, `pulse-pm-web.service`) if active, and
+  installing the systemd service kills the script-managed processes —
+  don't run both at once.
 
 ## Syncing phone ⇄ PC (home server, auto)
 
