@@ -63,7 +63,17 @@ export const COLORS = [
 ];
 
 export function uid(prefix = "id"): string {
-  return `${prefix}_${crypto.randomUUID()}`;
+  const c = (globalThis as any)?.crypto as Crypto | undefined;
+  // ponytail: Math.random fallback only when WebCrypto missing (old/insecure contexts)
+  if (c?.randomUUID) return `${prefix}_${c.randomUUID()}`;
+  if (c?.getRandomValues) {
+    const b = c.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+    return `${prefix}_${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function isOverdue(t: Task): boolean {

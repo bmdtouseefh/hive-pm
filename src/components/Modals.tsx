@@ -111,13 +111,18 @@ export function TaskModal(props: { goalId: string; editing?: Task; onClose: () =
   const goalsOfActive = () => {
     const pid = state.activeProjectId;
     if (!pid) return state.goals;
-    const mine = state.goals.filter((g) => g.projectId === pid);
-    return mine.length ? mine : state.goals;
+    return state.goals.filter((g) => g.projectId === pid);
+  };
+
+  const resolvedGoalId = () => {
+    const cur = goalId();
+    if (cur && state.goals.some((g) => g.id === cur)) return cur;
+    return goalsOfActive()[0]?.id ?? "";
   };
 
   const save = () => {
-    if (!title().trim()) return;
-    const payload = { goalId: goalId(), title: title().trim(), notes: notes().trim(), status: status(), priority: priority(), dueDate: due() || undefined };
+    if (!title().trim() || !resolvedGoalId()) return;
+    const payload = { goalId: resolvedGoalId(), title: title().trim(), notes: notes().trim(), status: status(), priority: priority(), dueDate: due() || undefined };
     if (props.editing) actions.updateTask(props.editing.id, payload);
     else actions.addTask(payload);
     props.onClose();
@@ -130,7 +135,7 @@ export function TaskModal(props: { goalId: string; editing?: Task; onClose: () =
         <p class="text-xs text-cream-500">Bottom of the hierarchy — the actual work.</p>
         <form class="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
           <Field label="Goal">
-            <select class={inputCls} value={goalId()} onChange={(e) => setGoalId(e.currentTarget.value)}>
+            <select class={inputCls} value={resolvedGoalId()} onChange={(e) => setGoalId(e.currentTarget.value)}>
               <For each={goalsOfActive()}>
                 {(g) => {
                   const pname = state.projects.find((p) => p.id === g.projectId)?.name ?? "";
@@ -138,6 +143,9 @@ export function TaskModal(props: { goalId: string; editing?: Task; onClose: () =
                 }}
               </For>
             </select>
+            <Show when={goalsOfActive().length === 0}>
+              <p class="mt-1 text-xs text-honey-300">No goals in this project yet — create a goal first, then add tasks to it.</p>
+            </Show>
           </Field>
           <Field label="Title"><input class={inputCls} value={title()} onInput={(e) => setTitle(e.currentTarget.value)} placeholder="e.g. Design empty state" autofocus /></Field>
           <Field label="Notes"><textarea class={inputCls} rows={3} value={notes()} onInput={(e) => setNotes(e.currentTarget.value)} placeholder="Details, links, acceptance criteria…" /></Field>
@@ -161,7 +169,7 @@ export function TaskModal(props: { goalId: string; editing?: Task; onClose: () =
           </div>
           <div class="flex gap-2 pt-1">
             <button type="button" onClick={props.onClose} class="flex-1 rounded-xl border border-hive-600 bg-hive-800 py-2 text-sm font-semibold text-cream-300 hover:bg-hive-700">Cancel</button>
-            <button type="submit" disabled={!title().trim()} class="flex-1 rounded-xl bg-honey-400 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300 disabled:opacity-40">Save task</button>
+            <button type="submit" disabled={!title().trim() || !resolvedGoalId()} class="flex-1 rounded-xl bg-honey-400 py-2 text-sm font-bold text-honey-ink hover:bg-honey-300 disabled:opacity-40">Save task</button>
           </div>
         </form>
       </div>
